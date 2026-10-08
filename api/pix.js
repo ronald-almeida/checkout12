@@ -1,4 +1,11 @@
 import { createHmac, timingSafeEqual, randomUUID } from 'node:crypto';
+function gatewayFailure(response, res) {
+ console.error('blackcat_request_failed', { status: response.status });
+ if(response.status===401||response.status===403)return res.status(502).json({error:'A Black Cat recusou a autenticação. Confira a BLACKCAT_API_KEY na hospedagem.'});
+ if(response.status===400||response.status===422)return res.status(400).json({error:'A Black Cat recusou os dados da cobrança. Confira nome, e-mail, telefone e CPF.'});
+ if(response.status===429)return res.status(503).json({error:'Muitas solicitações de pagamento. Aguarde um momento antes de tentar novamente.'});
+ return res.status(502).json({error:'A Black Cat está indisponível para esta solicitação. Tente novamente mais tarde.'});
+}
 const base = 'https://api.blackcatoficial.com/api';
 const title = 'Pós-Graduação Lato Sensu em Odontologia Oncológica';
 export function validCPF(cpf) {
@@ -15,7 +22,8 @@ export default async function handler(req,res) {
   if(req.method==='GET') {
    let id; try{id=verify(req.query.token)}catch{return res.status(401).json({error:'Sessão de pagamento inválida ou expirada.'})}
    const response=await fetch(`${base}/sales/${encodeURIComponent(id)}/status`,{headers:{'X-API-Key':process.env.BLACKCAT_API_KEY},signal:AbortSignal.timeout(15000)});
-   const result=await response.json(); if(!response.ok||!result.success)throw Error('provider');
+   if(!response.ok)return gatewayFailure(response,res);
+   const result=await response.json(); if(!result.success)throw Error('provider');
    return res.status(200).json({status:result.data.status});
   }
   if(req.method!=='POST'){res.setHeader('Allow','GET, POST');return res.status(405).json({error:'Método inválido.'})}
@@ -24,7 +32,8 @@ export default async function handler(req,res) {
   const name=String(body?.name||'').trim(),email=String(body?.email||'').trim(),phone=String(body?.phone||'').replace(/\D/g,''),cpf=String(body?.cpf||'').replace(/\D/g,'');
   if(name.length<5||name.length>120||!name.includes(' ')||!/^\S+@\S+\.\S+$/.test(email)||email.length>254||!/^\d{10,11}$/.test(phone)||!validCPF(cpf))return res.status(400).json({error:'Confira nome completo, e-mail, telefone e CPF.'});
   const response=await fetch(`${base}/sales/create-sale`,{method:'POST',headers:{'Content-Type':'application/json','X-API-Key':process.env.BLACKCAT_API_KEY},body:JSON.stringify({amount:49700,currency:'BRL',paymentMethod:'pix',items:[{title,unitPrice:49700,quantity:1,tangible:false}],customer:{name,email,phone,document:{number:cpf,type:'cpf'}},pix:{expiresInDays:1},externalRef:randomUUID()}),signal:AbortSignal.timeout(20000)});
-  const result=await response.json();if(!response.ok||!result.success)throw Error('provider');
+  if(!response.ok)return gatewayFailure(response,res);
+  const result=await response.json();if(!result.success)throw Error('provider');
   const data=result.data,p=data.paymentData; if(!data.transactionId||!(p?.copyPaste||p?.qrCode))throw Error('provider');
   return res.status(201).json({token:token(data.transactionId),status:data.status,copyPaste:p.copyPaste||p.qrCode,qrCodeBase64:p.qrCodeBase64,expiresAt:p.expiresAt});
  }catch{return res.status(502).json({error:'Não foi possível consultar a Black Cat. Se a geração demorou, confira no painel antes de tentar novamente.'})}
