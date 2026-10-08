@@ -1,13 +1,16 @@
 # Checkout12
-Checkout responsivo com Nunito e imagens fornecidas, pagamento único de R$397,00 via Pix Black Cat. Sem banco de dados.
 
-## Publicação
-Importe este repositório na Vercel, usando preset Other e output `public`. As funções em `api/` são executadas no servidor.
-Configure `BLACKCAT_API_KEY` nas variáveis de ambiente da Vercel. Opcionalmente configure `CHECKOUT_SESSION_SECRET` com um segredo aleatório forte (32 bytes ou mais). Faça novo deploy depois de configurar.
+Checkout com Nunito, imagens fornecidas e Pix PayShark de R$397,00. Sem banco de dados. Endereço opcional e não enviado ao gateway.
 
-O valor é fixado no servidor em 39700 centavos. A chave nunca é enviada ao navegador. O Pix fica no sessionStorage da aba para permitir recarregar sem gerar nova cobrança. A consulta usa token assinado e expira em 48 horas. Sem armazenamento próprio de clientes ou transações; os registros do gateway continuam no painel Black Cat. Não há liberação automática de conteúdo: o checkout apenas confirma o status PAID retornado pela API.
+## Vercel
+Configure PAYSHARK_API_KEY com a chave de pagamentos em Financeiro → Integrações → Credenciais de API. Não use a chave de saque ou tokenização. Configure CHECKOUT_SESSION_SECRET opcionalmente com segredo forte. Faça novo deploy após configurar.
 
-Os campos de endereço reproduzem a referência visual; por se tratar de produto digital, não são transmitidos ao gateway nem armazenados. Não foram inventados termos jurídicos ou links de política de privacidade. Adicione os documentos reais do vendedor antes de divulgar o checkout.
+POST https://api.gatewaypayshark.com.br/v1/payment usa Bearer, amount 39700, method PIX, payer e item DIGITAL. A resposta contém data.copypaste; a imagem QR é gerada no servidor com qrcode. A consulta manual usa GET /v1/payment/:id e token assinado.
 
-## Verificação
-`npm test`. Para testar cobrança real, configure a chave na hospedagem. Os testes locais usam uma API simulada e não geram pagamentos.
+A documentação proíbe polling no gateway. O checkout não faz consultas automáticas: o cliente usa o botão Já paguei. Atualizações automáticas requerem webhook com armazenamento durável de status e não estão implementadas neste projeto sem banco. Não existe liberação automática de conteúdo.
+
+O Pix fica apenas no sessionStorage da aba; cobranças anteriores à migração não são reutilizadas. Registros do gateway permanecem no painel PayShark.
+
+Documentação: https://app.gatewaypayshark.com.br/llms.txt
+
+npm test valida a integração com respostas simuladas, sem gerar cobranças reais.
