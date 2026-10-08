@@ -24,7 +24,7 @@ export default async function handler(req,res) {
    let id; try{id=verify(req.query.token)}catch{return res.status(401).json({error:'Sessão de pagamento inválida ou expirada.'})}
    const response=await fetch(`${base}/payment/${encodeURIComponent(id)}`,{headers:{Authorization:'Bearer '+process.env.PAYSHARK_API_KEY.trim().replace(/^Bearer\s+/i,'')},signal:AbortSignal.timeout(15000)});
    if(!response.ok)return gatewayFailure(response,res);
-   const result=await response.json(); if(!result.id||!result.status||result.method!=='PIX'||result.amount!==39700)throw Error('provider');
+   const result=await response.json(); if(!result.id||!result.status||result.method!=='PIX'||result.amount!==49770)throw Error('provider');
    return res.status(200).json({status:result.status});
   }
   if(req.method!=='POST'){res.setHeader('Allow','GET, POST');return res.status(405).json({error:'Método inválido.'})}
@@ -32,10 +32,10 @@ export default async function handler(req,res) {
   const body=typeof req.body==='string'?JSON.parse(req.body):req.body;
   const name=String(body?.name||'').trim(),email=String(body?.email||'').trim(),phone=String(body?.phone||'').replace(/\D/g,''),cpf=String(body?.cpf||'').replace(/\D/g,'');
   if(name.length<5||name.length>120||!name.includes(' ')||!/^\S+@\S+\.\S+$/.test(email)||email.length>254||!/^\d{10,11}$/.test(phone)||!validCPF(cpf))return res.status(400).json({error:'Confira nome completo, e-mail, telefone e CPF.'});
-  const response=await fetch(`${base}/payment`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+process.env.PAYSHARK_API_KEY.trim().replace(/^Bearer\s+/i,'')},body:JSON.stringify({amount:39700,currency:'BRL',method:'PIX',description:title,items:[{name:title,price:39700,quantity:1,type:'DIGITAL'}],payer:{name,email,phone,taxId:cpf},externalRef:randomUUID()}),signal:AbortSignal.timeout(20000)});
+  const response=await fetch(`${base}/payment`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+process.env.PAYSHARK_API_KEY.trim().replace(/^Bearer\s+/i,'')},body:JSON.stringify({amount:49770,currency:'BRL',method:'PIX',description:title,items:[{name:title,price:49770,quantity:1,type:'DIGITAL'}],payer:{name,email,phone,taxId:cpf},externalRef:randomUUID()}),signal:AbortSignal.timeout(20000)});
   if(!response.ok)return gatewayFailure(response,res);
   const result=await response.json();
-  if(!result.id||result.method!=='PIX'||result.amount!==39700)throw Error('provider');
+  if(!result.id||result.method!=='PIX'||result.amount!==49770)throw Error('provider');
   if(result.status==='REFUSED')return res.status(422).json({error:'A PayShark recusou esta cobrança. Confira o motivo no painel do gateway.'});
   const copyPaste=result.data?.copypaste; if(!copyPaste)throw Error('provider');
   return res.status(201).json({token:token(result.id),status:result.status,copyPaste,qrCodeBase64:await QRCode.toDataURL(copyPaste,{width:280,margin:2}),expiresAt:null});
