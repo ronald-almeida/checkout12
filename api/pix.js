@@ -31,7 +31,7 @@ export default async function handler(req,res) {
   const body=typeof req.body==='string'?JSON.parse(req.body):req.body;
   const name=String(body?.name||'').trim(),email=String(body?.email||'').trim(),phone=String(body?.phone||'').replace(/\D/g,''),cpf=String(body?.cpf||'').replace(/\D/g,'');
   if(name.length<5||name.length>120||!name.includes(' ')||!/^\S+@\S+\.\S+$/.test(email)||email.length>254||!/^\d{10,11}$/.test(phone)||!validCPF(cpf))return res.status(400).json({error:'Confira nome completo, e-mail, telefone e CPF.'});
-  const response=await fetch(`${base}/sales/create-sale`,{method:'POST',headers:{'Content-Type':'application/json','X-API-Key':process.env.BLACKCAT_API_KEY},body:JSON.stringify({amount:49700,currency:'BRL',paymentMethod:'pix',items:[{title,unitPrice:49700,quantity:1,tangible:false}],customer:{name,email,phone,document:{number:cpf,type:'cpf'}},pix:{expiresInDays:1},externalRef:randomUUID()}),signal:AbortSignal.timeout(20000)});
+  const response=await fetch(`${base}/sales/create-sale`,{method:'POST',headers:{'Content-Type':'application/json','X-API-Key':process.env.BLACKCAT_API_KEY},body:JSON.stringify({amount:39700,currency:'BRL',paymentMethod:'pix',items:[{title,unitPrice:39700,quantity:1,tangible:false}],customer:{name,email,phone,document:{number:cpf,type:'cpf'}},pix:{expiresInDays:1},externalRef:randomUUID()}),signal:AbortSignal.timeout(20000)});
   if(!response.ok)return gatewayFailure(response,res);
   const result=await response.json();if(!result.success)throw Error('provider');
   const data=result.data,p=data.paymentData; if(!data.transactionId||!(p?.copyPaste||p?.qrCode))throw Error('provider');
